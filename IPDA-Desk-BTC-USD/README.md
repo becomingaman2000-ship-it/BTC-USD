@@ -2,7 +2,7 @@
 
 Institutional web terminal that reads **BTC/USD** through the full **Inner Circle Trader (ICT)** playbook and publishes a live desk memorandum: bias, liquidity draws, PD arrays, kill-zone timing, model setups, and multi-horizon predictions.
 
-> This is a dedicated **BTC/USD** build of the IPDA Desk, duplicated from the EUR/USD system with the same ICT strategy but re-tuned for a 24/7 crypto cash tape. It is a **local duplicate** and is **not pushed to any repository yet** — deploy target (GitHub Pages / Netlify / a new repo) is still to be decided.
+> This is a dedicated **BTC/USD** build of the IPDA Desk, duplicated from the EUR/USD system with the same ICT strategy but re-tuned for a 24/7 crypto cash tape. It is configured as a static GitHub Pages project at **https://becomingaman2000-ship-it.github.io/BTC-USD/**. The repository-root publish mirror is ready for the current Pages source, while `node server.js` remains available for local development.
 
 ## What it does
 
