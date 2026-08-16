@@ -1,0 +1,9 @@
+{
+  "name": "ipda-desk-btc",
+  "version": "1.0.0",
+  "description": "IPDA Desk — BTC/USD institutional ICT terminal",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  }
+}
