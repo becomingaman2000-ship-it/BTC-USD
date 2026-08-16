@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IPDA Desk — BTC/USD Institutional ICT Terminal</title>
+  <meta name="description" content="Interbank Price Delivery Algorithm desk. Full ICT read of BTC/USD: market structure, liquidity, PD arrays, kill zones, and multi-horizon predictions." />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <div class="grain"></div>
+  <div id="boot" class="boot">
+    <div>
+      <em>IPDA</em>
+      <strong>Reading BTC/USD</strong>
+      <span>structure · liquidity · time</span>
+    </div>
+  </div>
+
+  <header class="mast">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 36 36" aria-hidden="true">
+        <rect x="1" y="1" width="34" height="34" rx="8" fill="none" stroke="currentColor" stroke-width="1.2"/>
+        <path d="M10 26V10h6.2c3.8 0 6.1 2 6.1 5.2 0 2.1-1 3.7-2.9 4.6L24 26h-3.1l-3.3-3.7H12.6V26H10zm2.6-6.2h3.3c2.1 0 3.4-1 3.4-2.7s-1.3-2.6-3.4-2.6h-3.3v5.3z" fill="currentColor"/>
+      </svg>
+      <div>
+        <strong>IPDA Desk</strong>
+        <em>Interbank Price Delivery Algorithm · <a href="backtest.html" style="color:inherit">3-month backtest</a></em>
+      </div>
+    </div>
+
+    <div class="pair">
+      <span class="kicker">Digital Asset · 24/7 Cash <b id="livePill" class="live" data-on="0">STANDBY</b></span>
+      <h1>BTC / USD</h1>
+    </div>
+
+    <div class="last">
+      <div id="spot" class="spot">92,400</div>
+      <div id="spotChg" class="chg down">—</div>
+      <div id="asOf" class="asof">IPDA COMPOSITE</div>
+    </div>
+
+    <div class="action-flag" id="actionFlag" data-action="FLAT">
+      <span>Action</span>
+      <strong id="actionWord">—</strong>
+    </div>
+      <div>
+        <span>HTF bias</span>
+        <b id="biasHtf" class="seal">—</b>
+      </div>
+      <div>
+        <span>Session bias</span>
+        <b id="biasLtf" class="seal">—</b>
+      </div>
+    </div>
+
+    <div class="clockbox">
+      <div id="nyClock" class="ny">—</div>
+      <div id="kzPill" class="kz" data-on="0">Kill zone</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="execute" id="execute">
+      <div class="ex-head">
+        <div class="ex-action" id="exAction" data-action="FLAT">
+          <span>Action</span>
+          <b id="exActionWord">WAIT</b>
+          <em id="exActionSub">Reading BTC/USD…</em>
+        </div>
+        <div>
+          <span class="ex-kicker">Live execution · updated every tick</span>
+          <h2 id="exState">READING THE TAPE</h2>
+          <p id="exWhen">Waiting on kill zone and entry array…</p>
+        </div>
+      </div>
+      <div class="ex-grid">
+        <article>
+          <span>Enter at</span>
+          <strong id="exEntry">—</strong>
+          <em id="exEntryDist">—</em>
+        </article>
+        <article>
+          <span>Stop loss</span>
+          <strong id="exSl">—</strong>
+          <em id="exSlDist">—</em>
+        </article>
+        <article class="tp">
+          <span>Take profit 1</span>
+          <strong id="exTp1">—</strong>
+          <em id="exTp1Dist">—</em>
+        </article>
+        <article class="tp">
+          <span>Take profit 2</span>
+          <strong id="exTp2">—</strong>
+          <em id="exTp2Dist">—</em>
+        </article>
+        <article>
+          <span>Next window</span>
+          <strong id="exWindow">—</strong>
+          <em id="exCount">—</em>
+        </article>
+        <article>
+          <span>Model / R:R</span>
+          <strong id="exModel">—</strong>
+          <em id="exRr">—</em>
+        </article>
+      </div>
+      <div class="ex-track"><i id="exBar"></i></div>
+      <p id="exNote">Connecting live BTC/USD…</p>
+      <div class="mailbar">
+        <label class="switch">
+          <input type="checkbox" id="mailToggle" checked />
+          <span>Email alerts</span>
+        </label>
+        <em id="mailAddr">becomingaman2000@gmail.com</em>
+        <button type="button" id="mailTest" class="ghost">Send test</button>
+        <span id="mailStatus" class="mail-status">Alerts on — first mail needs one Gmail confirmation</span>
+      </div>
+    </section>
+
+    <section class="limits">
+      <header class="limits-head">
+        <div>
+          <p class="eyebrow">Rest these on the book</p>
+          <h2>Limit orders by session</h2>
+        </div>
+        <p>One ticket per window. Cancel if the stop prints. Asian is map-only.</p>
+      </header>
+      <div id="limitBoard" class="limit-board"></div>
+    </section>
+
+    <section class="workspace">
+      <div class="chart-panel">
+        <div class="toolbar">
+          <div class="tf">
+            <button data-tf="M15">M15</button>
+            <button data-tf="H1" class="on">H1</button>
+            <button data-tf="H4">H4</button>
+            <button data-tf="D1">D1</button>
+            <button data-tf="W1">W1</button>
+          </div>
+          <div class="ovs">
+            <button data-ov="fvg">FVG</button>
+            <button data-ov="ob">OB</button>
+            <button data-ov="liq">Liquidity</button>
+            <button data-ov="eq">EQ / OTE</button>
+            <button data-ov="sessions">Sessions</button>
+            <button data-ov="setup">Setup</button>
+          </div>
+          <button id="rescan" class="ghost">Rescan IPDA</button>
+          <span id="feedStatus" class="feed-status" data-state="seek">Connecting tape…</span>
+        </div>
+        <div id="feedLine" class="feed-line">seeking live BTC/USD…</div>
+        <div class="stage">
+          <canvas id="tape"></canvas>
+          <canvas id="tapeOv"></canvas>
+        </div>
+        <div id="ohlc" class="ohlc"><span>Hover the tape</span></div>
+      </div>
+
+      <aside class="side">
+        <div class="gauge-card">
+          <div class="gauge">
+            <div class="dial"></div>
+            <div id="gaugeFill" class="needle"></div>
+            <div class="gnum"><b id="confScore">—</b><span>confluence</span></div>
+          </div>
+          <p id="confNotes">Scanning arrays…</p>
+        </div>
+
+        <div class="pd-card">
+          <header>
+            <span>2026 dealing range</span>
+            <b id="pdZone">DISCOUNT</b>
+          </header>
+          <div id="pdMeter" class="meter"><i></i></div>
+          <div class="meter-labs">
+            <span id="pdLow">79,400</span>
+            <span>EQ <em id="pdEq">100,400</em></span>
+            <span id="pdHigh">121,400</span>
+          </div>
+          <p>Premium is sell-side inventory. Discount is where the buy program restocks. Spot is below yearly equilibrium — HTF still seeks a higher draw once SSL is taken.</p>
+        </div>
+
+        <div class="po3-card">
+          <header>Power of Three <b id="po3Phase">—</b></header>
+          <p id="po3Text">Reading AMD cycle…</p>
+          <div id="sessGrid" class="sess"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="band">
+      <h2>Multi-horizon IPDA prediction</h2>
+      <div id="predGrid" class="pred"></div>
+      <ol id="scenarios" class="scen"></ol>
+    </section>
+
+    <section class="split">
+      <div>
+        <h2>ICT models in force</h2>
+        <div id="setups" class="setups"></div>
+      </div>
+      <div>
+        <h2>Key liquidity &amp; arrays</h2>
+        <ul id="lvlList" class="lvls"></ul>
+        <div class="pdcols">
+          <div>
+            <h3>Fair value gaps</h3>
+            <ul id="fvgList" class="mini"></ul>
+          </div>
+          <div>
+            <h3>Order / breaker blocks</h3>
+            <ul id="obList" class="mini"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="read">
+      <div class="prose">
+        <p class="eyebrow">Desk memorandum · 14 August 2026</p>
+        <h2 id="storyHead">Reading the tape…</h2>
+        <div id="storyBody"></div>
+        <ul id="storyBullets" class="facts"></ul>
+      </div>
+      <div class="read-side">
+        <div id="smtBox" class="smt"></div>
+        <div class="kz-card">
+          <h3>Kill zones (New York)</h3>
+          <ul id="kzList" class="kzlist"></ul>
+        </div>
+        <div id="mtfGrid" class="mtf"></div>
+      </div>
+    </section>
+
+    <section class="method">
+      <h2>How this desk reads BTC/USD</h2>
+      <div class="meth-grid">
+        <article>
+          <span>01</span>
+          <h3>IPDA range first</h3>
+          <p>Yearly and weekly dealing ranges set premium, equilibrium and discount. Nothing is bought in premium or sold in discount unless it is a scalp against an opposing HTF array.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Liquidity is the destination</h3>
+          <p>Buy-side rests above equal highs, PDH, PWH and session highs. Sell-side rests below equal lows, PDL, PWL and 90,000. Price is delivered from pool to pool.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Time is a filter</h3>
+          <p>London 02:00–05:00, NY AM 07:00–10:00 and the 10:00 Silver Bullet are the only windows used for initiation. Asian is for mapping the box. 24/7 trading, but the same kill zones still drive liquidity raids.</p>
+        </article>
+        <article>
+          <span>04</span>
+          <h3>2022 model sequence</h3>
+          <p>HTF bias → AMD Judas (sweep) → CISD / MSS → PD array in the correct zone → entry at CE → stop beyond the wick → T1 internal, T2 external liquidity.</p>
+        </article>
+        <article>
+          <span>05</span>
+          <h3>SMT &amp; relative strength</h3>
+          <p>BTC is always read against ETH. A lower low in bitcoin that ETH refuses is bullish SMT — the long is taken only after the raid, never before.</p>
+        </article>
+        <article>
+          <span>06</span>
+          <h3>No lagging stack</h3>
+          <p>No RSI, MACD or moving-average crosses are used as signals. SMAs appear only as widely watched retail magnets that IPDA often uses as liquidity.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    <div>
+      <strong>IPDA Desk</strong>
+      <span>BTC/USD · Inner Circle Trader methodology</span>
+    </div>
+    <p>
+      Educational market-structure terminal. Not investment advice, not a broker, not a signal service.
+      Crypto carries a high risk of loss. Predictions are algorithmic readings of liquidity and time — they can be wrong.
+      © <span id="yearNow">2026</span>
+    </p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

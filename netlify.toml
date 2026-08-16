@@ -1,0 +1,9 @@
+[build]
+  publish = "public"
+  command = "echo IPDA Desk"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "ALLOWALL"
+    Referrer-Policy = "no-referrer-when-downgrade"
