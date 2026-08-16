@@ -25,7 +25,15 @@ PUBLIC = ROOT / "public"
 CACHE_LOCK = threading.Lock()
 CACHE: dict = {"at": 0.0, "payload": None}
 CACHE_TTL_SECONDS = 55
-TIMEFRAMES = {"5m": 300, "15m": 900, "1h": 3600, "4h": 14400}
+TIMEFRAMES = {
+    "5m": 300,
+    "15m": 900,
+    "30m": 1800,
+    "1h": 3600,
+    "4h": 14400,
+    "1d": 86400,
+    "1w": 604800,
+}
 
 
 def _request_json(url: str, timeout: float = 4.0):
@@ -74,15 +82,44 @@ def _kraken_candles(interval_minutes: int) -> List[Candle]:
     ]
 
 
+def _aggregate_candles(candles: List[Candle], target_seconds: int) -> List[Candle]:
+    """Aggregate lower-timeframe candles into exchange-aligned larger bars."""
+    buckets: Dict[int, List[Candle]] = {}
+    for candle in candles:
+        bucket = candle.time // target_seconds * target_seconds
+        buckets.setdefault(bucket, []).append(candle)
+    result: List[Candle] = []
+    for timestamp, rows in sorted(buckets.items()):
+        result.append(Candle(
+            timestamp,
+            rows[0].open,
+            max(row.high for row in rows),
+            min(row.low for row in rows),
+            rows[-1].close,
+            sum(row.volume for row in rows),
+        ))
+    return result
+
+
 def _fetch_provider(provider: str) -> Dict[str, List[Candle]]:
     if provider == "Coinbase":
-        worker = lambda item: (item[0], _coinbase_candles(item[1]))
-        items = list(TIMEFRAMES.items())
-    else:
-        worker = lambda item: (item[0], _kraken_candles(item[1] // 60))
-        items = list(TIMEFRAMES.items())
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        return dict(executor.map(worker, items))
+        # Coinbase supports only specific granularities. Derive 30M, 4H, and 1W
+        # bars from supported lower frames rather than issuing invalid API calls.
+        source_intervals = (300, 900, 3600, 86400)
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            sources = dict(executor.map(lambda seconds: (seconds, _coinbase_candles(seconds)), source_intervals))
+        return {
+            "5m": sources[300],
+            "15m": sources[900],
+            "30m": _aggregate_candles(sources[900], 1800),
+            "1h": sources[3600],
+            "4h": _aggregate_candles(sources[3600], 14400),
+            "1d": sources[86400],
+            "1w": _aggregate_candles(sources[86400], 604800),
+        }
+    worker = lambda item: (item[0], _kraken_candles(item[1] // 60))
+    with ThreadPoolExecutor(max_workers=7) as executor:
+        return dict(executor.map(worker, list(TIMEFRAMES.items())))
 
 
 def _demo_candles(label: str, seconds: int, count: int = 300) -> List[Candle]:
@@ -134,7 +171,9 @@ def market_payload(force: bool = False) -> dict:
     candles = None
     errors = []
     provider = ""
-    for candidate in ("Coinbase", "Kraken"):
+    # Kraken natively exposes all seven required intervals. Coinbase remains a
+    # resilient fallback with deterministic candle aggregation.
+    for candidate in ("Kraken", "Coinbase"):
         try:
             candles = _fetch_provider(candidate)
             provider = candidate

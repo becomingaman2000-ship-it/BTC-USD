@@ -6,11 +6,12 @@ Aegis is an explainable, multi-timeframe BTC-USD decision-support system. It tur
 
 ## What is included
 
-- **4H → 1H → 15M → 5M chain of command** for directional context and execution alignment
+- **1W → 1D → 4H → 1H → 30M → 15M → 5M chain of command** with BUY, SELL, or WAIT status on every timeframe
 - Swing classification, market structure breaks, EMA regime, and ATR-normalized filters
 - Three-candle fair value gap detection with mitigation state
 - Displacement-origin order blocks and invalidation tracking
 - Buy-side/sell-side liquidity, dealing-range equilibrium, premium/discount, and sweep detection
+- 62–79% optimal trade entry (OTE) bands plus BOS/CHOCH structure events
 - UTC session/kill-zone context
 - Bounded bull/bear probabilities with a fully visible confluence stack
 - Entry, structural stop, two objectives, R:R, and a browser-side position-size calculator
@@ -63,16 +64,18 @@ python -m py_compile server.py ict_engine.py
 
 ### `GET /api/analysis`
 
-Returns the current market brief and candles for all four timeframes. Add `?refresh=1` to bypass the 55-second in-memory cache.
+Returns the current market brief and candles for all seven timeframes. Add `?refresh=1` to bypass the 55-second in-memory cache.
 
 Key response fields:
 
 - `data_mode`: `live` or `demo`; never infer this from the price itself
-- `direction`: `bullish`, `bearish`, or `neutral`
+- `direction`: `bullish`, `bearish`, or `neutral` market narrative
+- `trade_status`: strict `buy`, `sell`, or `wait` execution gate
 - `bullish_probability` / `bearish_probability`: bounded weighted estimates
-- `structures`: per-timeframe structure and swing metadata
-- `liquidity`, `fair_value_gaps`, `order_blocks`: detected ICT arrays
-- `trade_plan`: conditional risk-defined scenario
+- `structures`: BUY/SELL/WAIT status, strength, BOS/CHOCH, and swings for every timeframe
+- `liquidity`, `fair_value_gaps`, `order_blocks`: liquidity, OTE, and detected ICT arrays
+- `trade_plan`: conditional entry, invalidation, objectives, and risk/reward
+- `trade_checklist`: strategic alignment, execution, raid, PD array, OTE, session, R:R, and manual news gate
 - `confluences`: the evidence used by the score
 
 ### `GET /api/health`
@@ -81,13 +84,13 @@ Returns a small service health response.
 
 ## Scoring doctrine
 
-Higher timeframes deliberately receive more authority: 4H (24 points), 1H (21), 15M (13), and 5M (7). Active fair value gaps, order blocks, liquidity raids, and premium/discount location adjust that signed score. The result is compressed through a logistic function and bounded to 8–92%; the UI never presents 100% certainty.
+Higher timeframes deliberately receive more authority: 1W (20 points), 1D (19), 4H (17), 1H (13), 30M (10), 15M (8), and 5M (5). Active fair value gaps, order blocks, liquidity raids, and premium/discount location adjust that signed score. The result is compressed through a logistic function and bounded to 8–92%; the UI never presents 100% certainty. A separate trade gate remains at **WAIT** until execution and risk requirements are satisfied.
 
 A setup is **armed** only when directional confidence is at least 68% and a nearby, active price-delivery array exists. Otherwise it remains **developing** or **stand aside**. The latter is an intended outcome—not a system failure.
 
 ## Data behavior
 
-The server tries Coinbase first and Kraken second. If both public APIs are inaccessible, it supplies deterministic synthetic OHLCV data so the interface and analysis remain testable. The UI shows a persistent **Demo feed active** notice and `DEMO` label in that state; simulated prices are never represented as live.
+The server tries Kraken first because it natively supplies every required interval, then Coinbase with deterministic aggregation for 30M, 4H, and 1W candles. If both public APIs are inaccessible, it supplies deterministic synthetic OHLCV data so the interface and analysis remain testable. The UI shows a persistent **Demo feed active** notice and `DEMO` label in that state; simulated prices are never represented as live.
 
 ## Project layout
 

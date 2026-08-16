@@ -29,22 +29,31 @@ class EngineTests(unittest.TestCase):
         frames = {
             "5m": trending_candles(1, step_seconds=300),
             "15m": trending_candles(1, step_seconds=900),
+            "30m": trending_candles(1, step_seconds=1800),
             "1h": trending_candles(1, step_seconds=3600),
             "4h": trending_candles(1, step_seconds=14400),
+            "1d": trending_candles(1, step_seconds=86400),
+            "1w": trending_candles(1, step_seconds=604800),
         }
         result = analyze_market(frames, "test", "fixture")
         self.assertEqual(result["direction"], "bullish")
         self.assertGreater(result["bullish_probability"], 50)
         self.assertLessEqual(result["bullish_probability"], 92)
         self.assertEqual(result["bullish_probability"] + result["bearish_probability"], 100)
+        self.assertEqual(set(result["structures"]), {"5m", "15m", "30m", "1h", "4h", "1d", "1w"})
+        self.assertTrue(all(item["action"] == "buy" for item in result["structures"].values()))
+        self.assertEqual(len(result["trade_checklist"]), 8)
         self.assertLess(result["trade_plan"]["stop"], result["trade_plan"]["entry"])
 
     def test_bearish_market_has_stop_above_entry(self):
         frames = {
             "5m": trending_candles(-1, step_seconds=300),
             "15m": trending_candles(-1, step_seconds=900),
+            "30m": trending_candles(-1, step_seconds=1800),
             "1h": trending_candles(-1, step_seconds=3600),
             "4h": trending_candles(-1, step_seconds=14400),
+            "1d": trending_candles(-1, step_seconds=86400),
+            "1w": trending_candles(-1, step_seconds=604800),
         }
         result = analyze_market(frames, "test", "fixture")
         self.assertEqual(result["direction"], "bearish")

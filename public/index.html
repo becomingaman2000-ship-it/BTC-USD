@@ -69,7 +69,7 @@
           <div class="verdict-main">
             <div>
               <div class="direction-line"><span class="direction-icon" id="directionIcon">↗</span><h2 id="verdictText">Building market thesis</h2></div>
-              <p id="verdictSummary">Scanning structure, liquidity, imbalance and institutional arrays across four timeframes.</p>
+              <p id="verdictSummary">Scanning structure, liquidity, imbalance and institutional arrays from the 5-minute chart through the weekly narrative.</p>
             </div>
             <div class="confidence-seal">
               <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -108,7 +108,7 @@
               <div class="price-heading"><strong id="chartPrice">—</strong><span id="chartChange">—</span></div>
             </div>
             <div class="timeframe-tabs" role="tablist" aria-label="Chart timeframe">
-              <button data-tf="5m">5M</button><button data-tf="15m" class="active">15M</button><button data-tf="1h">1H</button><button data-tf="4h">4H</button>
+              <button data-tf="5m">5M</button><button data-tf="15m" class="active">15M</button><button data-tf="30m">30M</button><button data-tf="1h">1H</button><button data-tf="4h">4H</button><button data-tf="1d">1D</button><button data-tf="1w">1W</button>
             </div>
           </div>
           <div class="chart-tools">
@@ -144,9 +144,9 @@
       </section>
 
       <section class="structure-section section-block" id="confluence">
-        <div class="section-heading"><div><span class="eyebrow">MULTI-TIMEFRAME CHAIN OF COMMAND</span><h2>Structure alignment</h2></div><p>Higher timeframe intent → lower timeframe execution</p></div>
+        <div class="section-heading"><div><span class="eyebrow">FULL ICT CHAIN OF COMMAND</span><h2>5 minute to weekly trade status</h2></div><p>1W narrative → 1D / 4H bias → 1H / 30M context → 15M / 5M execution</p></div>
         <div class="structure-grid" id="structureGrid">
-          <div class="structure-card skeleton"></div><div class="structure-card skeleton"></div><div class="structure-card skeleton"></div><div class="structure-card skeleton"></div>
+          <div class="structure-card skeleton"></div><div class="structure-card skeleton"></div><div class="structure-card skeleton"></div><div class="structure-card skeleton"></div><div class="structure-card skeleton"></div><div class="structure-card skeleton"></div><div class="structure-card skeleton"></div>
         </div>
       </section>
 
@@ -166,7 +166,7 @@
             <div class="radar-labels"><span>Range low</span><span>50% EQ</span><span>Range high</span></div>
             <div class="radar-level sell"><span>SELL-SIDE POOL</span><strong id="sellSide">—</strong></div>
           </div>
-          <div class="radar-stats"><div><span>EQ</span><strong id="equilibriumPrice">—</strong></div><div><span>Nearest draw</span><strong id="nearestDraw">—</strong></div></div>
+          <div class="radar-stats"><div><span>EQ</span><strong id="equilibriumPrice">—</strong></div><div><span>Active 62–79% OTE</span><strong id="oteZone">—</strong></div><div><span>Nearest draw</span><strong id="nearestDraw">—</strong></div></div>
         </article>
 
         <article class="card reference-card">
@@ -181,10 +181,22 @@
         </article>
       </section>
 
+      <section class="readiness card section-block" aria-label="Trade readiness checklist">
+        <div class="readiness-command">
+          <span class="eyebrow">PRE-FLIGHT TRADE GATE</span>
+          <h2 id="readinessStatus">ASSESSING</h2>
+          <p id="readinessMessage">A trade is not ready until structure, liquidity, execution and risk conditions have been checked.</p>
+          <div class="readiness-legend"><span><i class="confirmed"></i>Confirmed</span><span><i class="pending"></i>Pending</span><span><i class="manual"></i>Manual check</span></div>
+        </div>
+        <div class="checklist-grid" id="tradeChecklist">
+          <div class="checklist-skeleton"></div><div class="checklist-skeleton"></div><div class="checklist-skeleton"></div><div class="checklist-skeleton"></div>
+        </div>
+      </section>
+
       <section class="protocol card section-block" id="protocol">
         <div class="protocol-title"><span class="eyebrow">RULES OF ENGAGEMENT</span><h2>Capital survives. The next setup arrives.</h2></div>
         <div class="protocol-steps">
-          <div><span>01</span><p><strong>Bias before entry.</strong> Require 4H and 1H intent or accept reduced conviction.</p></div>
+          <div><span>01</span><p><strong>Bias before entry.</strong> Require 1W, 1D and 4H intent before trusting lower-timeframe execution.</p></div>
           <div><span>02</span><p><strong>Raid before reaction.</strong> Let price take liquidity, then demand displacement.</p></div>
           <div><span>03</span><p><strong>Risk before reward.</strong> Define invalidation and size before placing an order.</p></div>
           <div><span>04</span><p><strong>No confirmation, no trade.</strong> Stand aside is an executable position.</p></div>
@@ -205,10 +217,10 @@
       <span class="eyebrow">SYSTEM DOCTRINE</span><h2 id="methodTitle">How Aegis forms a thesis</h2>
       <p>Aegis is a deterministic decision-support engine inspired by ICT concepts. It does not use hidden AI guesses or promise outcomes.</p>
       <div class="method-grid">
-        <div><span>01</span><h3>Frame intent</h3><p>4H and 1H swing structure, BOS, EMA regime and dealing range establish directional context.</p></div>
+        <div><span>01</span><h3>Frame intent</h3><p>1W, 1D, 4H and 1H swing structure, BOS, EMA regime and dealing range establish directional context.</p></div>
         <div><span>02</span><h3>Map liquidity</h3><p>Recent swing pools, equal highs/lows and wick-through-close-back-inside behavior identify raids.</p></div>
         <div><span>03</span><h3>Locate arrays</h3><p>Three-candle imbalances and displacement-origin order blocks define candidate reaction zones.</p></div>
-        <div><span>04</span><h3>Demand alignment</h3><p>15M execution and 5M momentum must support the higher-timeframe narrative before risk is armed.</p></div>
+        <div><span>04</span><h3>Demand alignment</h3><p>1H and 30M context plus 15M execution and 5M momentum must support the weekly/daily narrative before risk is armed.</p></div>
       </div>
       <div class="modal-callout"><svg><use href="#i-shield"/></svg><p>Confidence is a transparent weighted score. It is not calibrated certainty, and no signal should replace independent judgment.</p></div>
     </div>

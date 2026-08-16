@@ -70,6 +70,7 @@ function renderAnalysis(data) {
   renderConfluences(data);
   renderLiquidity(data);
   renderReferences(data);
+  renderChecklist(data);
 
   setText('chartPrice', money(data.price, 2));
   const change = byId('chartChange');
@@ -87,10 +88,10 @@ function renderTradePlan(data) {
   setupBadge.textContent = plan.status === 'armed' ? 'ARMED' : plan.status === 'developing' ? 'DEVELOPING' : 'STAND ASIDE';
   setText('executionState', plan.status === 'armed' ? 'SETUP ARMED' : plan.status === 'developing' ? 'AWAIT TRIGGER' : 'NO DEPLOYMENT');
 
-  const side = data.direction === 'neutral' ? 'NO-TRADE WATCH' : `${data.direction.toUpperCase()} SCENARIO`;
+  const side = data.trade_status === 'buy' ? 'BUY SETUP' : data.trade_status === 'sell' ? 'SELL SETUP' : 'WAIT / NO TRADE';
   setText('planSide', side);
-  byId('planSide').className = data.direction;
-  setText('planType', data.direction === 'neutral' ? 'Preserve capital until alignment' : titleCase(plan.entry_type));
+  byId('planSide').className = data.trade_status === 'wait' ? 'neutral' : data.direction;
+  setText('planType', data.trade_status === 'wait' ? 'Conditions incomplete — preserve capital' : titleCase(plan.entry_type));
   setText('planEntry', money(plan.entry, 2));
   setText('planStop', money(plan.stop, 2));
   setText('planTarget1', money(plan.target_1, 2));
@@ -103,8 +104,11 @@ function renderTradePlan(data) {
 }
 
 function renderStructure(data) {
-  const labels = { '4h': 'Strategic intent', '1h': 'Operational flow', '15m': 'Execution structure', '5m': 'Trigger momentum' };
-  byId('structureGrid').innerHTML = ['4h', '1h', '15m', '5m'].map(tf => {
+  const labels = {
+    '1w': 'Macro narrative', '1d': 'Daily bias', '4h': 'Strategic intent',
+    '1h': 'Operational flow', '30m': 'Intraday context', '15m': 'Execution', '5m': 'Trigger'
+  };
+  byId('structureGrid').innerHTML = ['1w', '1d', '4h', '1h', '30m', '15m', '5m'].map(tf => {
     const item = data.structures[tf];
     const pips = Array.from({ length: 5 }, (_, index) => {
       const active = index < Math.abs(item.score);
@@ -112,8 +116,8 @@ function renderStructure(data) {
     }).join('');
     return `<article class="structure-card">
       <div class="tf-head"><span class="tf-name">${tf.toUpperCase()} / ${labels[tf]}</span><span class="bias-badge ${item.bias}">${item.bias}</span></div>
-      <h3>${item.event}</h3>
-      <p>${item.high_pattern} highs · ${item.low_pattern} lows · ATR ${money(item.atr)}</p>
+      <h3 class="${item.bias}">${item.action.toUpperCase()}</h3>
+      <p><strong>${item.event}</strong><br>${item.high_pattern} highs · ${item.low_pattern} lows · ${item.strength}%</p>
       <div class="score-pips" aria-label="Structure strength ${Math.abs(item.score)} out of 5">${pips}</div>
     </article>`;
   }).join('');
@@ -139,6 +143,8 @@ function renderLiquidity(data) {
   setText('buySide', money(liq.buy_side));
   setText('sellSide', money(liq.sell_side));
   setText('equilibriumPrice', money(liq.equilibrium));
+  const ote = data.direction === 'bearish' ? liq.ote_short : liq.ote_long;
+  setText('oteZone', `${money(ote.low)}–${money(ote.high)}`);
   const buyDistance = Math.abs(liq.buy_side - data.price);
   const sellDistance = Math.abs(data.price - liq.sell_side);
   setText('nearestDraw', buyDistance <= sellDistance ? `BUY ${money(liq.buy_side)}` : `SELL ${money(liq.sell_side)}`);
@@ -155,6 +161,24 @@ function renderReferences(data) {
   setText('previousLow', money(levels.previous_day_low));
   setText('activeWindow', data.session.name);
   setText('windowState', data.session.active ? 'ACTIVE' : 'MONITOR');
+}
+
+function renderChecklist(data) {
+  const status = data.trade_status || 'wait';
+  const statusLabel = status === 'buy' ? 'BUY AUTHORIZED' : status === 'sell' ? 'SELL AUTHORIZED' : 'WAIT — NO TRADE';
+  setText('readinessStatus', statusLabel);
+  const heading = byId('readinessStatus');
+  heading.className = status;
+  setText('readinessMessage', status === 'wait'
+    ? 'One or more essential conditions are incomplete. Preserve capital and wait for confirmation.'
+    : `${status.toUpperCase()} conditions are aligned. Execute only at the defined entry with the stated invalidation.`);
+  byId('tradeChecklist').innerHTML = data.trade_checklist.map(item => {
+    const icon = item.status === 'confirmed' ? '✓' : item.status === 'blocked' ? '×' : item.status === 'manual' ? '!' : '·';
+    return `<div class="check-item">
+      <span class="check-icon ${item.status}">${icon}</span>
+      <div><h4>${item.name}</h4><p>${item.detail}</p></div>
+    </div>`;
+  }).join('');
 }
 
 async function loadAnalysis(force = false) {
@@ -238,7 +262,9 @@ function drawChart() {
     ctx.strokeStyle = '#181e20';
     ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, rect.height - pad.bottom); ctx.stroke();
     const date = new Date(candles[i].time * 1000);
-    const label = state.timeframe === '4h' ? date.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: 'UTC' }) : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' });
+    const label = ['4h', '1d', '1w'].includes(state.timeframe)
+      ? date.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: 'UTC' })
+      : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' });
     ctx.fillStyle = '#4f595b'; ctx.textAlign = 'center'; ctx.fillText(label, px, rect.height - 12);
   }
   ctx.textAlign = 'left';

@@ -111,12 +111,13 @@ def _timeframe_structure(candles: Sequence[Candle]) -> dict:
     last_broken_low = next((s for s in reversed(lows[:-1]) if current < s["price"]), None)
     event = "Range holding"
     event_direction = "neutral"
+    pre_break_momentum = momentum
     if last_broken_high and (not last_broken_low or last_broken_high["time"] > last_broken_low["time"]):
-        event = "Bullish BOS"
+        event = "Bullish CHOCH" if pre_break_momentum < 0 else "Bullish BOS"
         event_direction = "bullish"
         momentum += 1
     elif last_broken_low:
-        event = "Bearish BOS"
+        event = "Bearish CHOCH" if pre_break_momentum > 0 else "Bearish BOS"
         event_direction = "bearish"
         momentum -= 1
 
@@ -244,6 +245,10 @@ def _liquidity_map(candles: Sequence[Candle], structure: dict) -> dict:
 
     equilibrium = (range_high + range_low) / 2
     zone = "discount" if current < equilibrium else "premium"
+    dealing_range = range_high - range_low
+    # ICT's OTE retracement band spans 62–79% of the active dealing range.
+    ote_long = (range_high - dealing_range * 0.79, range_high - dealing_range * 0.62)
+    ote_short = (range_low + dealing_range * 0.62, range_low + dealing_range * 0.79)
     return {
         "buy_side": round(buy_side, 2),
         "sell_side": round(sell_side, 2),
@@ -251,6 +256,8 @@ def _liquidity_map(candles: Sequence[Candle], structure: dict) -> dict:
         "range_low": round(range_low, 2),
         "equilibrium": round(equilibrium, 2),
         "zone": zone,
+        "ote_long": {"low": round(ote_long[0], 2), "high": round(ote_long[1], 2)},
+        "ote_short": {"low": round(ote_short[0], 2), "high": round(ote_short[1], 2)},
         "sweep": sweep,
         "atr_distance_buy": round(abs(buy_side - current) / max(volatility, 1), 2),
         "atr_distance_sell": round(abs(current - sell_side) / max(volatility, 1), 2),
@@ -331,24 +338,34 @@ def _trade_plan(direction: str, confidence: int, candles: Sequence[Candle], stru
 
 
 def analyze_market(timeframes: Dict[str, Sequence[Candle]], data_mode: str = "live",
-                   provider: str = "Coinbase") -> dict:
-    """Analyze 5m/15m/1h/4h candle sets and return an explainable tactical brief."""
-    required = ("5m", "15m", "1h", "4h")
+                   provider: str = "Kraken") -> dict:
+    """Analyze the full 5M-to-1W chain and return an explainable tactical brief."""
+    required = ("5m", "15m", "30m", "1h", "4h", "1d", "1w")
+    minimum_candles = {"1w": 40}
     for name in required:
-        if name not in timeframes or len(timeframes[name]) < 60:
-            raise ValueError(f"At least 60 candles are required for {name}")
+        minimum = minimum_candles.get(name, 60)
+        if name not in timeframes or len(timeframes[name]) < minimum:
+            raise ValueError(f"At least {minimum} candles are required for {name}")
 
     structures = {name: _timeframe_structure(timeframes[name]) for name in required}
+    for structure in structures.values():
+        structure["action"] = (
+            "buy" if structure["bias"] == "bullish"
+            else "sell" if structure["bias"] == "bearish"
+            else "wait"
+        )
+        structure["strength"] = min(100, 45 + abs(structure["score"]) * 11)
     execution = timeframes["15m"]
     fvgs = _fair_value_gaps(execution)
     blocks = _order_blocks(execution)
     liquidity = _liquidity_map(execution, structures["15m"])
     session = _session_state(execution[-1].time)
 
-    timeframe_weights = {"4h": 24, "1h": 21, "15m": 13, "5m": 7}
+    # Strategic timeframes hold authority while intraday frames refine execution.
+    timeframe_weights = {"1w": 20, "1d": 19, "4h": 17, "1h": 13, "30m": 10, "15m": 8, "5m": 5}
     score = 0.0
     confluences: List[dict] = []
-    for name in ("4h", "1h", "15m", "5m"):
+    for name in ("1w", "1d", "4h", "1h", "30m", "15m", "5m"):
         structure = structures[name]
         sign = 1 if structure["bias"] == "bullish" else -1 if structure["bias"] == "bearish" else 0
         points = timeframe_weights[name] * sign * min(abs(structure["score"]) / 4, 1)
@@ -356,11 +373,16 @@ def analyze_market(timeframes: Dict[str, Sequence[Candle]], data_mode: str = "li
         confluences.append({
             "name": f"{name} market structure",
             "state": structure["bias"],
+            "action": structure["action"],
             "detail": f"{structure['high_pattern']} / {structure['low_pattern']} · {structure['event']}",
             "impact": round(abs(points)),
         })
 
-    initial_direction = "bullish" if score > 0 else "bearish"
+    initial_direction = (
+        "bullish" if score > 0 else "bearish" if score < 0
+        else structures["4h"]["bias"] if structures["4h"]["bias"] != "neutral"
+        else "bullish"
+    )
     open_fvgs = [gap for gap in fvgs if gap["status"] == "open"]
     aligned_fvgs = [gap for gap in open_fvgs if gap["direction"] == initial_direction]
     aligned_blocks = [block for block in blocks if block["status"] == "active" and block["direction"] == initial_direction]
@@ -393,6 +415,22 @@ def analyze_market(timeframes: Dict[str, Sequence[Candle]], data_mode: str = "li
     confluences.append({"name": "Dealing range", "state": zone_direction,
                          "detail": f"Price trades in {liquidity['zone']} vs. equilibrium", "impact": 5})
 
+    ote_key = "ote_long" if initial_direction == "bullish" else "ote_short"
+    active_ote = liquidity[ote_key]
+    in_ote = active_ote["low"] <= execution[-1].close <= active_ote["high"]
+    if in_ote:
+        ote_adjustment = 7 if initial_direction == "bullish" else -7
+        score += ote_adjustment
+    confluences.append({
+        "name": "Optimal trade entry (62–79%)",
+        "state": initial_direction if in_ote else "neutral",
+        "detail": (
+            f"Price inside {active_ote['low']:,.0f}–{active_ote['high']:,.0f} OTE"
+            if in_ote else f"Price outside {active_ote['low']:,.0f}–{active_ote['high']:,.0f} OTE"
+        ),
+        "impact": 7 if in_ote else 0,
+    })
+
     if session["active"]:
         # Session is a quality modifier, not inherently directional.
         confluences.append({"name": "Session timing", "state": "active", "detail": session["name"], "impact": 4})
@@ -411,6 +449,47 @@ def analyze_market(timeframes: Dict[str, Sequence[Candle]], data_mode: str = "li
     plan_direction = direction if direction != "neutral" else initial_direction
     plan = _trade_plan(plan_direction, confidence if direction != "neutral" else 50, execution,
                        structures["15m"], liquidity, fvgs, blocks)
+    higher_timeframes = ("1w", "1d", "4h")
+    execution_timeframes = ("1h", "30m", "15m", "5m")
+    htf_aligned = direction != "neutral" and all(structures[name]["bias"] == direction for name in higher_timeframes)
+    execution_aligned = direction != "neutral" and sum(
+        structures[name]["bias"] == direction for name in execution_timeframes
+    ) >= 3
+    has_aligned_array = bool(aligned_fvgs or aligned_blocks)
+    trade_gate_passed = (
+        plan["status"] == "armed"
+        and htf_aligned
+        and execution_aligned
+        and liquidity["sweep"] is not None
+        and has_aligned_array
+        and in_ote
+        and plan["risk_reward"] >= 1.5
+    )
+    trade_status = (
+        "buy" if trade_gate_passed and direction == "bullish"
+        else "sell" if trade_gate_passed and direction == "bearish"
+        else "wait"
+    )
+    if not trade_gate_passed and plan["status"] == "armed":
+        plan["status"] = "developing"
+    checklist = [
+        {"name": "Weekly / daily / 4H alignment", "status": "confirmed" if htf_aligned else "pending",
+         "detail": "Strategic order flow agrees" if htf_aligned else "Higher timeframes are mixed"},
+        {"name": "1H / 30M / 15M / 5M alignment", "status": "confirmed" if execution_aligned else "pending",
+         "detail": "Execution chain agrees" if execution_aligned else "Execution chain needs alignment"},
+        {"name": "Liquidity raid", "status": "confirmed" if liquidity["sweep"] else "pending",
+         "detail": liquidity["sweep"]["label"] if liquidity["sweep"] else "No recent confirmed sweep"},
+        {"name": "FVG or order-block support", "status": "confirmed" if has_aligned_array else "pending",
+         "detail": "Aligned price-delivery array found" if has_aligned_array else "No active aligned PD array"},
+        {"name": "62–79% OTE location", "status": "confirmed" if in_ote else "caution",
+         "detail": f"Active band {active_ote['low']:,.0f}–{active_ote['high']:,.0f}"},
+        {"name": "Session timing", "status": "confirmed" if session["active"] else "caution",
+         "detail": session["name"]},
+        {"name": "Minimum 1.5R available", "status": "confirmed" if plan["risk_reward"] >= 1.5 else "blocked",
+         "detail": f"Current objective offers {plan['risk_reward']:.2f}R"},
+        {"name": "High-impact news check", "status": "manual",
+         "detail": "Verify an external economic calendar before entry"},
+    ]
     current = execution[-1].close
     previous_day_proxy = execution[-min(97, len(execution))].close
     change = ((current / previous_day_proxy) - 1) * 100
@@ -440,6 +519,7 @@ def analyze_market(timeframes: Dict[str, Sequence[Candle]], data_mode: str = "li
         "price": round(current, 2),
         "change_24h": round(change, 2),
         "direction": direction,
+        "trade_status": trade_status,
         "confidence": confidence,
         "bullish_probability": bullish_probability,
         "bearish_probability": bearish_probability,
@@ -453,6 +533,7 @@ def analyze_market(timeframes: Dict[str, Sequence[Candle]], data_mode: str = "li
         "order_blocks": blocks,
         "confluences": confluences,
         "trade_plan": plan,
+        "trade_checklist": checklist,
         "reference_levels": ranges,
         "candles": {name: [c.public() for c in candles] for name, candles in timeframes.items()},
         "disclaimer": "Educational decision support only. Probability is a rules-based estimate, not a guarantee or financial advice.",
