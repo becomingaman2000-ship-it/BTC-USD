@@ -31,6 +31,27 @@ Open [http://localhost:8000](http://localhost:8000). The server binds to `0.0.0.
 PORT=9000 python server.py
 ```
 
+## Deploy
+
+The repository includes three production entry points:
+
+- `render.yaml` — Render Blueprint with automated tests and `/api/health` monitoring
+- `Dockerfile` — portable OCI image definition with an application health check
+- `Procfile` — compatible with Railway and other Procfile-based platforms
+
+### Render
+
+After the deployment changes are on the repository's default branch, create a **New Blueprint** in Render and select this repository. Render reads `render.yaml`, runs the test suite, starts `python server.py`, and assigns an HTTPS `onrender.com` URL. No environment secrets are required.
+
+### Docker
+
+```bash
+docker build -t aegis-btc-usd .
+docker run --rm -p 8000:8000 -e PORT=8000 aegis-btc-usd
+```
+
+The application stores no user data and requires no database. A production platform only needs to supply its assigned `PORT`.
+
 ## Test
 
 ```bash
